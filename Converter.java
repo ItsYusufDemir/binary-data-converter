@@ -153,5 +153,15 @@ public class Converter {
         return binaryString;
     }
 
+    public static int[] convertBinaryToDecimal(String binaryString) {//binary değerleri decimal'a çevir ve int array olarak return et
+        String[] binaryArray = binaryString.split("\n");//her satırı bir eleman olarak ayır
+        int[] decimalArray = new int[binaryArray.length];//decimal değerler için yeterli boyutta array oluştur
+        for (int i = 0; i < binaryArray.length; i++) {
+            decimalArray[i] = Integer.parseInt(binaryArray[i], 2);//dönüştürdüğün değerleri array elemanlarına ata
+            System.out.println(decimalArray[i]);
+        }
+        return decimalArray;//arrayi geri döndür
+    }
+
 
 }
