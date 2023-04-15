@@ -153,14 +153,39 @@ public class Converter {
         return binaryString;
     }
 
-    public static int[] convertBinaryToDecimal(String binaryString) {//binary değerleri decimal'a çevir ve int array olarak return et
-        String[] binaryArray = binaryString.split("\n");//her satırı bir eleman olarak ayır
-        int[] decimalArray = new int[binaryArray.length];//decimal değerler için yeterli boyutta array oluştur
-        for (int i = 0; i < binaryArray.length; i++) {
-            decimalArray[i] = Integer.parseInt(binaryArray[i], 2);//dönüştürdüğün değerleri array elemanlarına ata
-            System.out.println(decimalArray[i]);
+    public static int unsignedToDecimal(String binaryString) {//binary değerleri decimal'a çevir ve int array olarak return et
+        return Integer.parseInt(binaryString, 2);
+    }
+
+    public static int signedToDecimal(String binary) {
+        int n = binary.length();
+        int signBit = 0;
+        if (binary.charAt(0) == '1') {
+            // If the leftmost bit is 1, then it's a negative number
+            signBit = -1;
+            // Flip all the bits in the binary string
+            StringBuilder flipped = new StringBuilder();
+            for (int i = 0; i < n; i++) {
+                if (binary.charAt(i) == '0') {
+                    flipped.append('1');
+                } else {
+                    flipped.append('0');
+                }
+            }
+            binary = flipped.toString();
         }
-        return decimalArray;//arrayi geri döndür
+        // Convert the binary string to decimal
+        int decimal = 0;
+        for (int i = n - 1; i >= 0; i--) {
+            if (binary.charAt(i) == '1') {
+                decimal += Math.pow(2, n - i - 1);
+            }
+        }
+        // Add the sign bit if necessary
+        if (signBit == -1) {
+            decimal = -1 * (decimal + 1);
+        }
+        return decimal;
     }
 
 
