@@ -41,7 +41,7 @@ public class Converter {
 
             } else if (sizeOfData == 3) { //We have 4 numbers in each line
 
-            } else { //We have 3 numbers in each line
+            } else { //We have 3 numbers in each line.
 
             }
 
