@@ -184,6 +184,60 @@ public class Converter {
         return FloatingTYpe.NORMALIZED;
     }
 
+    public static String hexToBinary(String hexString) {
+        //
+        hexString = hexString.replaceAll(" ", "");
+        // Her satırı tek tek binary'ye çevir
+        String binaryString = "";
+        String[] hexArray = hexString.split("\\r?\\n");//her satırı arrayin bir elemanı olarak al
+        for (String hex : hexArray) {//for each yapısı ile array elemanlarını tek tek gez hex değerleri byte'a dönüştür
+            byte[] bytes = new byte[hex.length() / 2];//byte array oluştur
+            for (int i = 0; i < bytes.length; i++) {//bütün elemanları gez
+                bytes[i] = (byte) Integer.parseInt(hex.substring(2 * i, 2 * i + 2), 16);//her array elemanına byte'a dönüştürülmüş hex değerlerini ekle
+            }
+            for (byte b : bytes) {//for each yapııs ile array elemanlarını tek tek gez ve byte değerleri bit'e çevir
+                binaryString += String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
+            }
+            binaryString += "\n";
+        }
+        return binaryString;
+    }
+
+    public static int unsignedToDecimal(String binaryString) {//binary değerleri decimal'a çevir ve int array olarak return et
+        return Integer.parseInt(binaryString, 2);
+    }
+
+    public static int signedToDecimal(String binary) {
+        int n = binary.length();
+        int signBit = 0;
+        if (binary.charAt(0) == '1') {
+            // If the leftmost bit is 1, then it's a negative number
+            signBit = -1;
+            // Flip all the bits in the binary string
+            StringBuilder flipped = new StringBuilder();
+            for (int i = 0; i < n; i++) {
+                if (binary.charAt(i) == '0') {
+                    flipped.append('1');
+                } else {
+                    flipped.append('0');
+                }
+            }
+            binary = flipped.toString();
+        }
+        // Convert the binary string to decimal
+        int decimal = 0;
+        for (int i = n - 1; i >= 0; i--) {
+            if (binary.charAt(i) == '1') {
+                decimal += Math.pow(2, n - i - 1);
+            }
+        }
+        // Add the sign bit if necessary
+        if (signBit == -1) {
+            decimal = -1 * (decimal + 1);
+        }
+        return decimal;
+    }
+
 
 
 
