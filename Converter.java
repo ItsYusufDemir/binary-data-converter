@@ -31,6 +31,7 @@ public class Converter {
     static int sizeOfData; // 1, 2, 3 or 4 bytes.
     static boolean isLittleEndian;
     static String currentLine;
+    static boolean carryOut;
 
     private static FileReader inputFileReader;
     private static FileWriter outputFileWriter;
@@ -231,24 +232,40 @@ public class Converter {
     public static String roundFraction(String str) {
 
         String one = "1";
-        int oneInt = Integer.parseInt(one, 2);
-        String first13 = str.substring(0, 13);
-        long first13Long = Long.parseLong(first13, 2);
-        String remainder = str.substring(13);
-        long remainderLong = Long.parseLong(remainder);
-        int length = remainder.length();
-        long sum = 0;
+        int oneInt = Integer.parseInt(one,2); //creating a binary 1
+        String first13 = str.substring(0,13); //getting initial 13 character fraction
+        long first13Long = Long.parseLong(first13,2); //creating an initial binary first13
+        String remainder = str.substring(13); //remaining part that exceeds 13 length
+        long remainderLong = Long.parseLong(remainder); //creating the remaining part as decimal
+        int length = remainder.length(); //remaining part length
+        long sum = 0; //will be updated
 
-        if (remainderLong < (10 ^ (length - 1))) {
+        if (remainderLong < (10^(length-1))) { //it rounds to low
 
             return first13;
-        } else if (remainderLong > (10 ^ (length - 1))) {
+        }
+        else if (remainderLong > (10^(length-1))) { //it rounds to up
 
-            sum = first13Long + oneInt;
-            return Long.toBinaryString(sum);
-        } else if (remainderLong == (10 ^ (length - 1))) {
+            if (first13.equals("1111111111111")) { //this is an exception that should be handled first
 
-            if (str.charAt(12) == '1') {
+                carryOut = true;
+                return "0000000000000";
+            }
+
+            else { //binary addition to round up
+                sum = first13Long + oneInt;
+                return Long.toBinaryString(sum);
+            }
+        }
+        else if (remainderLong == (10^(length-1))) { // if remaining part is halfway, fraction is rounded to even
+
+            if (first13.equals("1111111111111")) { //this is an exception that should be handled first
+
+                carryOut = true;
+                return "0000000000000";
+            }
+
+            else if (str.charAt(12) == '1') { //this rounds up the fraction because the last digit can't be odd
 
                 sum = first13Long + oneInt;
                 return Long.toBinaryString(sum);
@@ -382,6 +399,23 @@ public class Converter {
         return newStr;
     }
 
+    public static void printOutput(String number, FileWriter file) {
+
+        int indexE = number.indexOf('e');
+        int indexDot = number.indexOf('.');
+        String output = "";
+
+        if ((indexE - indexDot) > 5) {
+
+            output = number.substring(0,indexDot+6) + number.substring(indexE);
+
+        }
+
+        else {
+
+            output = number;
+
+        }
 
     public static void printOutput(String number, FileWriter file) {
 
