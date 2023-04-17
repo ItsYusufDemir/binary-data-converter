@@ -71,7 +71,7 @@ public class Converter {
 
     }
 
-    private static void readLinesExtractNumbersAndPrint() {
+    private static void readLinesExtractNumbersAndPrint() throws IOException {
         ArrayList<String> numbers = new ArrayList<>();
 
         int startingIndex = 0;
@@ -399,29 +399,63 @@ public class Converter {
         return newStr;
     }
 
-    public static void printOutput(String number, FileWriter file) {
+    public static void printOutput(String number, FileWriter file) throws IOException {
 
-        int indexE = number.indexOf('e');
-        int indexDot = number.indexOf('.');
         String output = "";
 
-        if ((indexE - indexDot) > 5) {
+        if(number.equals("0.0") || number.equals("-0.0"))
+            output = "0";
+        else if(doesContainDot(number)){ //If the number is a floating point number
 
-            output = number.substring(0,indexDot+6) + number.substring(indexE);
+            int dotIndex = 0;
+            int eIndex = -1;
+            for(int i = 0; i < number.length(); i++) {  //Find the index of dot character
+                if (number.charAt(i) == '.') {
+                    dotIndex = i;
+                }
+
+
+                if(number.charAt(i) == 'e' || number.charAt(i) == 'E')
+                    eIndex = i;
+            }
+
+            for(int i = 0; i <= dotIndex; i++){ //Take the digits until dot (including dot) ex: 2345.
+                output += number.charAt(i);
+            }
+
+            int counter = 0;
+            for(int i = dotIndex + 1; i < number.length() && (counter < 5);i++){ //Take the digits after the dot until 5 digits of precision
+                output += number.charAt(i);
+                counter++;
+            }
+
+
+            for(int i = eIndex; i < number.length() && eIndex != -1; i++){ //Take the remaining ex: e-20
+                if(i == eIndex)
+                    output += 'e';
+                else
+                    output += number.charAt(i);
+            }
+
 
         }
-
-        else {
-
+        else
             output = number;
 
-        }
 
-    public static void printOutput(String number, FileWriter file) {
 
-        System.out.print(number + " ");
-
+        System.out.print(output + " ");
+        file.write(output + " ");
     }
 
+
+    public static boolean doesContainDot(String number){
+        for(int i = 0; i < number.length(); i++){  //If the number contains a dot, return true
+            if(number.charAt(i) == '.')
+                return true;
+        }
+
+        return false; //Else, return false
+    }
 
 }
