@@ -3,8 +3,9 @@
  *
  * Description:
  */
+
 import java.io.*;
-import java.util.*;
+import java.util.Scanner;
 
 public class Converter {
 
@@ -12,13 +13,13 @@ public class Converter {
     }
 
     //ENUMERATORS
-    enum DataType{ //3 kind of data can be read: unsigned int, signed int, floating point number
+    enum DataType { //3 kind of data can be read: unsigned int, signed int, floating point number
         UNSIGNED,
         SIGNED,
         FLOAT
     }
 
-    enum FloatingTYpe{ //There are three kinds of floating points: denormalized, normalized, special
+    enum FloatingTYpe { //There are three kinds of floating points: denormalized, normalized, special
         NORMALIZED,
         DENORMALIZED,
         SPECIAL
@@ -30,39 +31,66 @@ public class Converter {
     static boolean isLittleEndian;
     static String currentLine;
 
-    public static void main(String args[]) {
+    private static FileReader inputFileReader;
+    private static FileWriter outputFileWriter;
 
-        takeInputs();  //It will ask for the data type, data size and byte ordering from the user and update the global variables
+    private static final String OUTPUT_FILE_PATH = "output.txt";
+    private static final String INPUT_FILE_PATH = "input.txt";
 
-        while(currentLine != null){
 
-            currentLine = hexToBinary(currentLine);
+    public static void main(String args[]) throws IOException {
 
-            if(sizeOfData == 1) { // We have 12 numbers in each line
+        try {
+            takeInputs();  //It will ask for the data type, data size and byte ordering from the user and update the global variables
+            openFiles();
+            readLine(inputFileReader);
 
+            while (currentLine != null && currentLine.length() == 35) {
+                readLinesExtractNumbersAndPrint();
+
+                currentLine = hexToBinary(currentLine);
+                readLine(inputFileReader);
             }
-            else if(sizeOfData == 2){ //We have 6 numbers in each line
-
-
-            }
-            else if(sizeOfData == 3) { //We have 4 numbers in each line
-
-
-            }
-            else{ //We have 3 numbers in each line
-
-
-            }
-
-
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        } finally {
+            inputFileReader.close();
+            outputFileWriter.close();
         }
+    }
 
+    private static void readLinesExtractNumbersAndPrint() {
+        String[] numbers;
+        if (sizeOfData == 1) { // We have 12 numbers in each line
+            numbers = currentLine.split(" ");
+        } else if (sizeOfData == 2) { //We have 6 numbers in each line
+            numbers = new String[]{currentLine.substring(0, 5),
+                    currentLine.substring(6, 11),
+                    currentLine.substring(12, 17),
+                    currentLine.substring(18, 23),
+                    currentLine.substring(24, 29),
+                    currentLine.substring(30, 35)
+            };
+        } else if (sizeOfData == 3) { //We have 4 numbers in each line
+            numbers = new String[]{currentLine.substring(0, 8),
+                    currentLine.substring(9, 17),
+                    currentLine.substring(18, 26),
+                    currentLine.substring(27, 35)
+            };
+        } else { //We have 3 numbers in each line
+            numbers = new String[]{currentLine.substring(0, 11),
+                    currentLine.substring(12, 23),
+                    currentLine.substring(24, 35)
+            };
+        }
+        for (int i = 0; i < numbers.length; i++) {
+            System.out.println(i + ". number: " + numbers[i]);
+        }
+    }
 
-
-
-
-
-
+    private static void openFiles() throws IOException {
+        outputFileWriter = new FileWriter(OUTPUT_FILE_PATH);
+        inputFileReader = new FileReader(INPUT_FILE_PATH);
 
     }
 
@@ -77,11 +105,9 @@ public class Converter {
         int dataTypesWithNums = consoleInput.nextInt();
         if (dataTypesWithNums == 1) {
             dataType = DataType.UNSIGNED;
-        }
-        else if (dataTypesWithNums == 2) {
+        } else if (dataTypesWithNums == 2) {
             dataType = DataType.SIGNED;
-        }
-        else if (dataTypesWithNums == 3) {
+        } else if (dataTypesWithNums == 3) {
             dataType = DataType.FLOAT;
         }
 
@@ -94,9 +120,9 @@ public class Converter {
      *
      * Floating point numbers are decoded here, their decimal value is returned.
      */
-    public static String decodeFloat(String str){  //Input will be in binary and byte order is considered before coming here.
+    public static String decodeFloat(String str) {  //Input will be in binary and byte order is considered before coming here.
 
-        if(str.length() != sizeOfData * 8){  //If the data size is 3 bytes, then str must be length of 8*3 = 24 bits.
+        if (str.length() != sizeOfData * 8) {  //If the data size is 3 bytes, then str must be length of 8*3 = 24 bits.
             System.out.println("Binary input size should be same as data size in global!");
             System.exit(0);
         }
@@ -111,58 +137,50 @@ public class Converter {
         /* Taking the fraction and exp from the str as substrings
          *
          */
-        if(sizeOfData == 1){ //If the size is 1 byte: 1 sign, 4 exp, 3 fraction
+        if (sizeOfData == 1) { //If the size is 1 byte: 1 sign, 4 exp, 3 fraction
             fraction = str.substring(5);
-            exp = str.substring(1,5);
-        }
-        else if(sizeOfData == 2){ //If the size is 2 bytes: 1 sign, 6 exp, 9 fraction
+            exp = str.substring(1, 5);
+        } else if (sizeOfData == 2) { //If the size is 2 bytes: 1 sign, 6 exp, 9 fraction
             fraction = str.substring(7);
-            exp = str.substring(1,7);
-        }
-        else if(sizeOfData == 3){ //If the size is 3 bytes: 1 sign, 8 exp, 15 fraction
+            exp = str.substring(1, 7);
+        } else if (sizeOfData == 3) { //If the size is 3 bytes: 1 sign, 8 exp, 15 fraction
             fraction = str.substring(9);
             fraction = roundFraction(fraction); //Since the fraction is grater than 13 digits, round it.
-            exp = str.substring(1,9);
+            exp = str.substring(1, 9);
 
-        }
-        else if(sizeOfData == 4) {//If the size is 2 bytes: 1 sign, 10 exp, 21 fraction
+        } else if (sizeOfData == 4) {//If the size is 2 bytes: 1 sign, 10 exp, 21 fraction
             fraction = str.substring(11);
             fraction = roundFraction(fraction); //Since the fraction is grater than 13 digits, round it.
             exp = str.substring(1, 11);
-        }
-        else{ //Otherwise, give error
+        } else { //Otherwise, give error
             System.out.println("Data size must be 1, 2, 3 or 4 bytes!");
             System.exit(0);
         }
-
 
 
         int fractionInt = unsignedToDecimal(fraction); //Decimal value of fraction
         int expInt = unsignedToDecimal(exp); //Decimal value of exp
         int bias = (int) (Math.pow(2, exp.length() - 1)) - 1; //Bias is 2^(k-1) - 1     k is exp.lenght()
 
-        if(findTypeOfFloat(exp) == FloatingTYpe.SPECIAL) { //Special floating point number, exp = 111....11
+        if (findTypeOfFloat(exp) == FloatingTYpe.SPECIAL) { //Special floating point number, exp = 111....11
 
-            if(fractionInt != 0){  //If the fraction is not all zero
+            if (fractionInt != 0) {  //If the fraction is not all zero
                 return "NaN";
-            }
-            else{
-                if(signBit == 0) //According to the sign bit, return correct infinity
+            } else {
+                if (signBit == 0) //According to the sign bit, return correct infinity
                     return "∞";
                 else
                     return "-∞";
             }
 
-        }
-        else if(findTypeOfFloat(exp) == FloatingTYpe.NORMALIZED){ //Normalized floating point number
+        } else if (findTypeOfFloat(exp) == FloatingTYpe.NORMALIZED) { //Normalized floating point number
 
             int E = expInt - bias;
             double mantissa = 1 + fractionInt / Math.pow(2, 13); //To find .001011010110, first find its unsgined value,
             // then divide to 2^13. We add 1 to mantissa because in normalized form, mantissa is in the form like 1.101001....
 
             return (Math.pow(-1, signBit) * mantissa * Math.pow(2, E)) + ""; //Decimal value is: (-1)^s x M x 2^E
-        }
-        else { //Denormalized floating point number
+        } else { //Denormalized floating point number
 
             int E = 1 - bias;
             double mantissa = 0 + fractionInt / Math.pow(2, 13); //To find .001011010110, first find its unsgined value,
@@ -174,11 +192,12 @@ public class Converter {
 
     }
 
+    private static String roundFraction(String fraction) {
+        return null;
+    }
 
 
-    public static FloatingTYpe findTypeOfFloat(String exp){
-
-
+    public static FloatingTYpe findTypeOfFloat(String exp) {
 
 
         return FloatingTYpe.NORMALIZED;
@@ -239,8 +258,9 @@ public class Converter {
     }
 
 
-
-
-
+    public static void readLine(FileReader fileReader) throws IOException {
+        BufferedReader bufferReader = new BufferedReader(fileReader);
+        currentLine = bufferReader.readLine();
+    }
 
 }
