@@ -98,7 +98,7 @@ public class Converter {
 
         Scanner consoleInput = new Scanner(System.in);
 
-        System.out.println("Enter 1 if it is little indian or 0 if not:");
+        System.out.println("Enter true if it is little indian or false if not:");
         isLittleEndian = consoleInput.nextBoolean();
 
         System.out.println("Enter 1 if it is unsigned int, 2 if it is signed int, 3 if it is floating point number:");
@@ -107,7 +107,7 @@ public class Converter {
             dataType = DataType.UNSIGNED;
         } else if (dataTypesWithNums == 2) {
             dataType = DataType.SIGNED;
-        } else if (dataTypesWithNums == 3) {
+        } else {
             dataType = DataType.FLOAT;
         }
 
@@ -192,9 +192,42 @@ public class Converter {
 
     }
 
-    private static String roundFraction(String fraction) {
-        return null;
+    public static String roundFraction(String str) {
+
+        String one = "1";
+        int oneInt = Integer.parseInt(one,2);
+        String first13 = str.substring(0,13);
+        long first13Long = Long.parseLong(first13,2);
+        String remainder = str.substring(13);
+        long remainderLong = Long.parseLong(remainder);
+        int length = remainder.length();
+        long sum = 0;
+
+        if (remainderLong < (10^(length-1))) {
+
+            return first13;
+        }
+        else if (remainderLong > (10^(length-1))) {
+
+            sum = first13Long + oneInt;
+            return Long.toBinaryString(sum);
+        }
+        else if (remainderLong == (10^(length-1))) {
+
+            if (str.charAt(12) == '1') {
+
+                sum = first13Long + oneInt;
+                return Long.toBinaryString(sum);
+            }
+            else {
+
+                return first13;
+            }
+        }
+        else return first13;
     }
+
+
 
 
     public static FloatingTYpe findTypeOfFloat(String exp) {
