@@ -20,7 +20,7 @@ public class Converter {
         FLOAT
     }
 
-    enum FloatingTYpe { //There are three kinds of floating points: denormalized, normalized, special
+    enum FloatingType { //There are three kinds of floating points: denormalized, normalized, special
         NORMALIZED,
         DENORMALIZED,
         SPECIAL
@@ -34,6 +34,7 @@ public class Converter {
 
     private static FileReader inputFileReader;
     private static FileWriter outputFileWriter;
+    private static BufferedReader bufferedReader;
 
     private static final String OUTPUT_FILE_PATH = "output.txt";
     private static final String INPUT_FILE_PATH = "input.txt";
@@ -41,32 +42,31 @@ public class Converter {
 
     public static void main(String args[]) throws IOException {
 
+
         try {
             takeInputs();  //It will ask for the data type, data size and byte ordering from the user and update the global variables
             openFiles();
 
-
-
         } catch (IOException ioe) {
             ioe.printStackTrace();
-        } finally {
-            //inputFileReader.close();
-            //outputFileWriter.close();
+            System.exit(0);
         }
 
-        readLine(inputFileReader);
+        bufferedReader = new BufferedReader(inputFileReader);
 
+        readLine();
 
         while (currentLine != null && currentLine.length() == 35) {
             readLinesExtractNumbersAndPrint();
 
             //currentLine = hexToBinary(currentLine);
-            readLine(inputFileReader);
+            readLine();
+            System.out.println();
+            outputFileWriter.write('\n');
         }
 
-
-
-
+        inputFileReader.close();
+        outputFileWriter.close();
 
     }
 
@@ -86,8 +86,7 @@ public class Converter {
             endingIndex = 10;
 
 
-        while (endingIndex <= 23) {
-
+        while (endingIndex <= 34) {
 
             String currentNumber = currentLine.substring(startingIndex, endingIndex + 1);
             currentNumber = byteOrdering(currentNumber); //If is little endian, do some process.
@@ -117,7 +116,10 @@ public class Converter {
                 endingIndex += 12;
             }
 
+        }
 
+        for(int i = 0; i < numbers.size(); i++){
+            printOutput(numbers.get(i), outputFileWriter);
         }
     }
 
@@ -156,7 +158,6 @@ public class Converter {
      */
     public static String decodeFloat(String str) {  //Input will be in binary and byte order is considered before coming here.
 
-        int a = str.length();
         if (str.length() != sizeOfData * 8) {  //If the data size is 3 bytes, then str must be length of 8*3 = 24 bits.
             System.out.println("Binary input size should be same as data size in global!");
             System.exit(0);
@@ -197,7 +198,7 @@ public class Converter {
         int expInt = unsignedToDecimal(exp); //Decimal value of exp
         int bias = (int) (Math.pow(2, exp.length() - 1)) - 1; //Bias is 2^(k-1) - 1     k is exp.lenght()
 
-        if (findTypeOfFloat(exp) == FloatingTYpe.SPECIAL) { //Special floating point number, exp = 111....11
+        if (findTypeOfFloat(exp) == FloatingType.SPECIAL) { //Special floating point number, exp = 111....11
 
             if (fractionInt != 0) {  //If the fraction is not all zero
                 return "NaN";
@@ -208,7 +209,7 @@ public class Converter {
                     return "-∞";
             }
 
-        } else if (findTypeOfFloat(exp) == FloatingTYpe.NORMALIZED) { //Normalized floating point number
+        } else if (findTypeOfFloat(exp) == FloatingType.NORMALIZED) { //Normalized floating point number
 
             int E = expInt - bias;
             double mantissa = 1 + fractionInt / Math.pow(2, 13); //To find .001011010110, first find its unsgined value,
@@ -265,10 +266,25 @@ public class Converter {
 
 
 
-    public static FloatingTYpe findTypeOfFloat(String exp) {
+    public static FloatingType findTypeOfFloat(String exp) {
 
+        boolean isThereZero = false;
+        boolean isThereOne = false;
 
-        return FloatingTYpe.NORMALIZED;
+        for(int i = 0; i < exp.length(); i++){
+
+            if(exp.charAt(i) == '0')
+                isThereZero = true;
+            else if (exp.charAt(i) == '1')
+                isThereOne = true;
+        }
+
+        if(isThereOne == true && isThereZero == false)
+            return FloatingType.SPECIAL;
+        else if(isThereOne == false && isThereZero == true)
+            return FloatingType.DENORMALIZED;
+        else
+            return FloatingType.NORMALIZED;
     }
 
     public static String hexToBinary(String hexString) {
@@ -334,9 +350,9 @@ public class Converter {
     }
 
 
-    public static void readLine(FileReader fileReader) throws IOException {
-        BufferedReader bufferReader = new BufferedReader(fileReader);
-        currentLine = bufferReader.readLine();
+    public static void readLine() throws IOException {
+        //BufferedReader bufferReader = new BufferedReader(fileReader);
+        currentLine = bufferedReader.readLine();
     }
 
     public static String byteOrdering(String data) {
@@ -367,6 +383,13 @@ public class Converter {
         }
 
         return newStr;
+    }
+
+
+    public static void printOutput(String number, FileWriter file){
+
+        System.out.print(number + " ");
+
     }
 
 
