@@ -5,6 +5,7 @@
  */
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Converter {
@@ -43,50 +44,83 @@ public class Converter {
         try {
             takeInputs();  //It will ask for the data type, data size and byte ordering from the user and update the global variables
             openFiles();
-            readLine(inputFileReader);
 
-            while (currentLine != null && currentLine.length() == 35) {
-                readLinesExtractNumbersAndPrint();
 
-                currentLine = hexToBinary(currentLine);
-                readLine(inputFileReader);
-            }
+
         } catch (IOException ioe) {
             ioe.printStackTrace();
         } finally {
-            inputFileReader.close();
-            outputFileWriter.close();
+            //inputFileReader.close();
+            //outputFileWriter.close();
         }
+
+        readLine(inputFileReader);
+
+
+        while (currentLine != null && currentLine.length() == 35) {
+            readLinesExtractNumbersAndPrint();
+
+            //currentLine = hexToBinary(currentLine);
+            readLine(inputFileReader);
+        }
+
+
+
+
+
     }
 
     private static void readLinesExtractNumbersAndPrint() {
-        String[] numbers;
-        if (sizeOfData == 1) { // We have 12 numbers in each line
-            numbers = currentLine.split(" ");
-        } else if (sizeOfData == 2) { //We have 6 numbers in each line
-            numbers = new String[]{currentLine.substring(0, 5),
-                    currentLine.substring(6, 11),
-                    currentLine.substring(12, 17),
-                    currentLine.substring(18, 23),
-                    currentLine.substring(24, 29),
-                    currentLine.substring(30, 35)
-            };
-        } else if (sizeOfData == 3) { //We have 4 numbers in each line
-            numbers = new String[]{currentLine.substring(0, 8),
-                    currentLine.substring(9, 17),
-                    currentLine.substring(18, 26),
-                    currentLine.substring(27, 35)
-            };
-        } else { //We have 3 numbers in each line
-            numbers = new String[]{currentLine.substring(0, 11),
-                    currentLine.substring(12, 23),
-                    currentLine.substring(24, 35)
-            };
-        }
-        for (int i = 0; i < numbers.length; i++) {
-            System.out.println(i + ". number: " + numbers[i]);
+        ArrayList<String> numbers = new ArrayList<>();
+
+        int startingIndex = 0;
+        int endingIndex = 0;
+
+        if (sizeOfData == 1)
+            endingIndex = 1;
+        else if (sizeOfData == 2)
+            endingIndex = 4;
+        else if (sizeOfData == 3)
+            endingIndex = 7;
+        else
+            endingIndex = 10;
+
+
+        while (endingIndex <= 23) {
+
+
+            String currentNumber = currentLine.substring(startingIndex, endingIndex + 1);
+            currentNumber = byteOrdering(currentNumber); //If is little endian, do some process.
+            currentNumber = deleteSpaces(currentNumber);
+            currentNumber = hexToBinary(currentNumber);
+
+            if (dataType == DataType.FLOAT) {
+                numbers.add(decodeFloat(currentNumber));
+            } else if (dataType == DataType.SIGNED) {
+                numbers.add(signedToDecimal(currentNumber) + "");
+            } else {
+                numbers.add(unsignedToDecimal(currentNumber) + "");
+            }
+
+
+            if (sizeOfData == 1) {
+                startingIndex += 3;
+                endingIndex += 3;
+            } else if (sizeOfData == 2) {
+                startingIndex += 6;
+                endingIndex += 6;
+            } else if (sizeOfData == 3) {
+                startingIndex += 9;
+                endingIndex += 9;
+            } else {
+                startingIndex += 12;
+                endingIndex += 12;
+            }
+
+
         }
     }
+
 
     private static void openFiles() throws IOException {
         outputFileWriter = new FileWriter(OUTPUT_FILE_PATH);
@@ -122,6 +156,7 @@ public class Converter {
      */
     public static String decodeFloat(String str) {  //Input will be in binary and byte order is considered before coming here.
 
+        int a = str.length();
         if (str.length() != sizeOfData * 8) {  //If the data size is 3 bytes, then str must be length of 8*3 = 24 bits.
             System.out.println("Binary input size should be same as data size in global!");
             System.exit(0);
@@ -250,13 +285,21 @@ public class Converter {
             for (byte b : bytes) {//for each yapııs ile array elemanlarını tek tek gez ve byte değerleri bit'e çevir
                 binaryString += String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
             }
-            binaryString += "\n";
+
         }
         return binaryString;
     }
 
     public static int unsignedToDecimal(String binaryString) {//binary değerleri decimal'a çevir ve int array olarak return et
-        return Integer.parseInt(binaryString, 2);
+
+        int decimal = 0;
+        int powerIndex = 0;
+        for(int i = binaryString.length() - 1; i >= 0; i--){
+            decimal += (binaryString.charAt(i) - '0') * Math.pow(2, powerIndex);
+            powerIndex++;
+        }
+
+        return decimal;
     }
 
     public static int signedToDecimal(String binary) {
@@ -295,5 +338,38 @@ public class Converter {
         BufferedReader bufferReader = new BufferedReader(fileReader);
         currentLine = bufferReader.readLine();
     }
+
+    public static String byteOrdering(String data) {
+
+        if(!isLittleEndian)
+            return data;
+
+        if (data.length() == 2) {
+            return data;
+        } else if (data.length() == 5) {
+            return data.substring(3, 5) + " " + data.substring(0, 2);
+        } else if (data.length() == 8) {
+            return data.substring(6, 8) + " " + data.substring(3, 5) + " " + data.substring(0, 2);
+        } else if (data.length() == 11) {
+            return data.substring(9, 11) + " " + data.substring(6, 8) + " " + data.substring(3, 5) + " " + data.substring(0, 2);
+        }
+        return null;
+    }
+
+
+    public static String deleteSpaces(String str){  //This function deletes the whitespaces in a string.
+        String[] bytes = str.split("\\s+");
+
+        String newStr = "";
+
+        for(int i = 0; i < bytes.length; i++){
+            newStr += bytes[i];
+        }
+
+        return newStr;
+    }
+
+
+
 
 }
