@@ -1,7 +1,11 @@
-/* Author: @ItsYusufDemir
+/* Authors: Mehmet Said AltIok - 150117504
+            Tayfun Ekentok 150120072
+            Yusuf AYDIN - 150119014
+ *          Yusuf Demir - 150120032
+ *
  * Date: 11.04.2023 23:05
  *
- * Description:
+ * Description: Building a binary data converter which converts binary to float, int or unsigned int
  */
 
 import java.io.*;
@@ -10,8 +14,6 @@ import java.util.Scanner;
 
 public class Converter {
 
-    public Converter() throws FileNotFoundException {
-    }
 
     //ENUMERATORS
     enum DataType { //3 kind of data can be read: unsigned int, signed int, floating point number
@@ -43,7 +45,6 @@ public class Converter {
 
     public static void main(String args[]) throws IOException {
 
-
         try {
             takeInputs();  //It will ask for the data type, data size and byte ordering from the user and update the global variables
             openFiles();
@@ -54,13 +55,11 @@ public class Converter {
         }
 
         bufferedReader = new BufferedReader(inputFileReader);
-
         readLine();
 
-        while (currentLine != null && currentLine.length() == 35) {
+        while (currentLine != null && currentLine.length() == 35) {  //While loop read line by line and interprets it
             extractNumbersAndPrint();
 
-            //currentLine = hexToBinary(currentLine);
             readLine();
             System.out.println();
             outputFileWriter.write('\n');
@@ -77,7 +76,7 @@ public class Converter {
         int startingIndex = 0;
         int endingIndex = 0;
 
-        if (sizeOfData == 1)
+        if (sizeOfData == 1) //Make endingIndex appropriate according to size of data
             endingIndex = 1;
         else if (sizeOfData == 2)
             endingIndex = 4;
@@ -87,7 +86,7 @@ public class Converter {
             endingIndex = 10;
 
 
-        while (endingIndex <= 34) {
+        while (endingIndex <= 34) { //Read the whole line
 
             String currentNumber = currentLine.substring(startingIndex, endingIndex + 1);
             currentNumber = byteOrdering(currentNumber); //If is little endian, do some process.
@@ -128,7 +127,6 @@ public class Converter {
     private static void openFiles() throws IOException {
         outputFileWriter = new FileWriter(OUTPUT_FILE_PATH);
         inputFileReader = new FileReader(INPUT_FILE_PATH);
-
     }
 
     public static void takeInputs() {
@@ -137,7 +135,6 @@ public class Converter {
 
         System.out.println("Enter the input file name: ");
         INPUT_FILE_PATH = consoleInput.next();
-
 
 
         System.out.println("Byte ordering:"); //l for little endian, b for big endian.
@@ -294,7 +291,7 @@ public class Converter {
     }
 
 
-    public static FloatingType findTypeOfFloat(String exp) {
+    public static FloatingType findTypeOfFloat(String exp) { //Find the type of a float: special, denormalized, normalized
 
         boolean isThereZero = false;
         boolean isThereOne = false;
@@ -386,7 +383,7 @@ public class Converter {
         currentLine = bufferedReader.readLine();
     }
 
-    public static String byteOrdering(String data) {
+    public static String byteOrdering(String data) { //It makes the byte order according to isLittleEndian
 
         if (!isLittleEndian)
             return data;
@@ -420,8 +417,10 @@ public class Converter {
 
         String output = "";
 
-        if(number.equals("0.0") || number.equals("-0.0"))
+        if(number.equals("0.0"))
             output = "0";
+        else if(number.equals("-0.0"))
+            output = "-0";
         else if(doesContainDot(number)){ //If the number is a floating point number
 
             int dotIndex = 0;
@@ -458,7 +457,6 @@ public class Converter {
         }
         else
             output = number;
-
 
 
         System.out.print(output + " ");
