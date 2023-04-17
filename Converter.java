@@ -20,7 +20,7 @@ public class Converter {
         FLOAT
     }
 
-    enum FloatingTYpe { //There are three kinds of floating points: denormalized, normalized, special
+    enum FloatingType { //There are three kinds of floating points: denormalized, normalized, special
         NORMALIZED,
         DENORMALIZED,
         SPECIAL
@@ -35,6 +35,7 @@ public class Converter {
 
     private static FileReader inputFileReader;
     private static FileWriter outputFileWriter;
+    private static BufferedReader bufferedReader;
 
     private static final String OUTPUT_FILE_PATH = "output.txt";
     private static final String INPUT_FILE_PATH = "input.txt";
@@ -42,32 +43,31 @@ public class Converter {
 
     public static void main(String args[]) throws IOException {
 
+
         try {
             takeInputs();  //It will ask for the data type, data size and byte ordering from the user and update the global variables
             openFiles();
 
-
-
         } catch (IOException ioe) {
             ioe.printStackTrace();
-        } finally {
-            //inputFileReader.close();
-            //outputFileWriter.close();
+            System.exit(0);
         }
 
-        readLine(inputFileReader);
+        bufferedReader = new BufferedReader(inputFileReader);
 
+        readLine();
 
         while (currentLine != null && currentLine.length() == 35) {
             readLinesExtractNumbersAndPrint();
 
             //currentLine = hexToBinary(currentLine);
-            readLine(inputFileReader);
+            readLine();
+            System.out.println();
+            outputFileWriter.write('\n');
         }
 
-
-
-
+        inputFileReader.close();
+        outputFileWriter.close();
 
     }
 
@@ -87,8 +87,7 @@ public class Converter {
             endingIndex = 10;
 
 
-        while (endingIndex <= 23) {
-
+        while (endingIndex <= 34) {
 
             String currentNumber = currentLine.substring(startingIndex, endingIndex + 1);
             currentNumber = byteOrdering(currentNumber); //If is little endian, do some process.
@@ -118,7 +117,10 @@ public class Converter {
                 endingIndex += 12;
             }
 
+        }
 
+        for (int i = 0; i < numbers.size(); i++) {
+            printOutput(numbers.get(i), outputFileWriter);
         }
     }
 
@@ -157,7 +159,6 @@ public class Converter {
      */
     public static String decodeFloat(String str) {  //Input will be in binary and byte order is considered before coming here.
 
-        int a = str.length();
         if (str.length() != sizeOfData * 8) {  //If the data size is 3 bytes, then str must be length of 8*3 = 24 bits.
             System.out.println("Binary input size should be same as data size in global!");
             System.exit(0);
@@ -198,7 +199,7 @@ public class Converter {
         int expInt = unsignedToDecimal(exp); //Decimal value of exp
         int bias = (int) (Math.pow(2, exp.length() - 1)) - 1; //Bias is 2^(k-1) - 1     k is exp.lenght()
 
-        if (findTypeOfFloat(exp) == FloatingTYpe.SPECIAL) { //Special floating point number, exp = 111....11
+        if (findTypeOfFloat(exp) == FloatingType.SPECIAL) { //Special floating point number, exp = 111....11
 
             if (fractionInt != 0) {  //If the fraction is not all zero
                 return "NaN";
@@ -209,7 +210,7 @@ public class Converter {
                     return "-∞";
             }
 
-        } else if (findTypeOfFloat(exp) == FloatingTYpe.NORMALIZED) { //Normalized floating point number
+        } else if (findTypeOfFloat(exp) == FloatingType.NORMALIZED) { //Normalized floating point number
 
             int E = expInt - bias;
             double mantissa = 1 + fractionInt / Math.pow(2, 13); //To find .001011010110, first find its unsgined value,
@@ -258,7 +259,7 @@ public class Converter {
         }
         else if (remainderLong == (10^(length-1))) { // if remaining part is halfway, fraction is rounded to even
 
-            if (first13.equals("1111111111111")) { ////this is an exception that should be handled first
+            if (first13.equals("1111111111111")) { //this is an exception that should be handled first
 
                 carryOut = true;
                 return "0000000000000";
@@ -268,95 +269,109 @@ public class Converter {
 
                 sum = first13Long + oneInt;
                 return Long.toBinaryString(sum);
-            }
-            else {
+            } else {
 
                 return first13;
             }
+        } else return first13;
+    }
+
+
+    public static FloatingType findTypeOfFloat(String exp) {
+
+        boolean isThereZero = false;
+        boolean isThereOne = false;
+
+        for (int i = 0; i < exp.length(); i++) {
+
+            if (exp.charAt(i) == '0')
+                isThereZero = true;
+            else if (exp.charAt(i) == '1')
+                isThereOne = true;
         }
-        else return first13;
+
+        if (isThereOne == true && isThereZero == false)
+            return FloatingType.SPECIAL;
+        else if (isThereOne == false && isThereZero == true)
+            return FloatingType.DENORMALIZED;
+        else
+            return FloatingType.NORMALIZED;
     }
 
-
-
-
-    public static FloatingTYpe findTypeOfFloat(String exp) {
-
-
-        return FloatingTYpe.NORMALIZED;
-    }
-
+    // This method takes a hexadecimal string as input and converts it to its equivalent binary value.
+    // The method returns the binary value as a string.
     public static String hexToBinary(String hexString) {
-        //
-        hexString = hexString.replaceAll(" ", "");
-        // Her satırı tek tek binary'ye çevir
-        String binaryString = "";
-        String[] hexArray = hexString.split("\\r?\\n");//her satırı arrayin bir elemanı olarak al
-        for (String hex : hexArray) {//for each yapısı ile array elemanlarını tek tek gez hex değerleri byte'a dönüştür
-            byte[] bytes = new byte[hex.length() / 2];//byte array oluştur
-            for (int i = 0; i < bytes.length; i++) {//bütün elemanları gez
-                bytes[i] = (byte) Integer.parseInt(hex.substring(2 * i, 2 * i + 2), 16);//her array elemanına byte'a dönüştürülmüş hex değerlerini ekle
+        hexString = hexString.replaceAll(" ", ""); // remove any spaces from the input string
+        String binaryString = ""; // initialize the output binary string
+        String[] hexArray = hexString.split("\\r?\\n"); // split the input string into an array of strings, each containing a hexadecimal value
+        for (String hex : hexArray) {
+            byte[] bytes = new byte[hex.length() / 2]; // create a byte array to hold the hexadecimal value
+            for (int i = 0; i < bytes.length; i++) {
+                bytes[i] = (byte) Integer.parseInt(hex.substring(2 * i, 2 * i + 2), 16); // convert each pair of hexadecimal digits to a byte value
             }
-            for (byte b : bytes) {//for each yapııs ile array elemanlarını tek tek gez ve byte değerleri bit'e çevir
-                binaryString += String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
+            for (byte b : bytes) {
+                binaryString += String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0'); // convert each byte value to an 8-bit binary string and append it to the output binary string
             }
 
         }
-        return binaryString;
+        return binaryString; // return the final output binary string
     }
 
-    public static int unsignedToDecimal(String binaryString) {//binary değerleri decimal'a çevir ve int array olarak return et
+    // This method takes a binary string as input and converts it to its equivalent decimal value.
+    // The method returns the decimal value as an integer.
+    public static int unsignedToDecimal(String binaryString) {
+        int decimal = 0; // initialize decimal value to 0
+        int powerIndex = 0; // initialize power index to 0
 
-        int decimal = 0;
-        int powerIndex = 0;
-        for(int i = binaryString.length() - 1; i >= 0; i--){
-            decimal += (binaryString.charAt(i) - '0') * Math.pow(2, powerIndex);
-            powerIndex++;
+        // loop through the binary string from right to left
+        for (int i = binaryString.length() - 1; i >= 0; i--) {
+            decimal += (binaryString.charAt(i) - '0') * Math.pow(2, powerIndex); // add the decimal value of each binary digit to the running total
+            powerIndex++; // increment the power index
         }
-
-        return decimal;
+        return decimal; // return the final decimal value
     }
 
+    // This method takes a binary string as input and converts it to its equivalent signed decimal value.
+    // The method returns the decimal value as an integer.
     public static int signedToDecimal(String binary) {
-        int n = binary.length();
-        int signBit = 0;
-        if (binary.charAt(0) == '1') {
-            // If the leftmost bit is 1, then it's a negative number
-            signBit = -1;
+        int n = binary.length(); // get the length of the binary string
+        int signBit = 0; // initialize the sign bit to 0
+        if (binary.charAt(0) == '1') {// If the leftmost bit is 1, then it's a negative number
+            signBit = -1; // set the sign bit to -1
             // Flip all the bits in the binary string
-            StringBuilder flipped = new StringBuilder();
+            StringBuilder flipped = new StringBuilder(); // create a StringBuilder object to hold the flipped binary string
             for (int i = 0; i < n; i++) {
                 if (binary.charAt(i) == '0') {
-                    flipped.append('1');
+                    flipped.append('1'); // flip each 0 to 1
                 } else {
-                    flipped.append('0');
+                    flipped.append('0'); // flip each 1 to 0
                 }
             }
-            binary = flipped.toString();
+            binary = flipped.toString(); // set the binary string to the flipped value
         }
         // Convert the binary string to decimal
-        int decimal = 0;
+        int decimal = 0; // initialize the decimal value to 0
         for (int i = n - 1; i >= 0; i--) {
             if (binary.charAt(i) == '1') {
-                decimal += Math.pow(2, n - i - 1);
+                decimal += Math.pow(2, n - i - 1); // add the decimal value of each binary digit to the running total
             }
         }
         // Add the sign bit if necessary
         if (signBit == -1) {
-            decimal = -1 * (decimal + 1);
+            decimal = -1 * (decimal + 1); // if the sign bit is negative, convert the decimal value to its two's complement form
         }
-        return decimal;
+        return decimal; // return the final decimal value
     }
 
 
-    public static void readLine(FileReader fileReader) throws IOException {
-        BufferedReader bufferReader = new BufferedReader(fileReader);
-        currentLine = bufferReader.readLine();
+    public static void readLine() throws IOException {
+        //BufferedReader bufferReader = new BufferedReader(fileReader);
+        currentLine = bufferedReader.readLine();
     }
 
     public static String byteOrdering(String data) {
 
-        if(!isLittleEndian)
+        if (!isLittleEndian)
             return data;
 
         if (data.length() == 2) {
@@ -372,12 +387,12 @@ public class Converter {
     }
 
 
-    public static String deleteSpaces(String str){  //This function deletes the whitespaces in a string.
+    public static String deleteSpaces(String str) {  //This function deletes the whitespaces in a string.
         String[] bytes = str.split("\\s+");
 
         String newStr = "";
 
-        for(int i = 0; i < bytes.length; i++){
+        for (int i = 0; i < bytes.length; i++) {
             newStr += bytes[i];
         }
 
@@ -402,6 +417,11 @@ public class Converter {
 
         }
 
+    public static void printOutput(String number, FileWriter file) {
+
+        System.out.print(number + " ");
+
+    }
 
 
 }
