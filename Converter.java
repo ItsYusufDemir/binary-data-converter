@@ -38,7 +38,7 @@ public class Converter {
     private static BufferedReader bufferedReader;
 
     private static final String OUTPUT_FILE_PATH = "output.txt";
-    private static final String INPUT_FILE_PATH = "input.txt";
+    private static String INPUT_FILE_PATH = "input.txt";
 
 
     public static void main(String args[]) throws IOException {
@@ -58,7 +58,7 @@ public class Converter {
         readLine();
 
         while (currentLine != null && currentLine.length() == 35) {
-            readLinesExtractNumbersAndPrint();
+            extractNumbersAndPrint();
 
             //currentLine = hexToBinary(currentLine);
             readLine();
@@ -71,7 +71,7 @@ public class Converter {
 
     }
 
-    private static void readLinesExtractNumbersAndPrint() throws IOException {
+    private static void extractNumbersAndPrint() throws IOException {
         ArrayList<String> numbers = new ArrayList<>();
 
         int startingIndex = 0;
@@ -135,20 +135,37 @@ public class Converter {
 
         Scanner consoleInput = new Scanner(System.in);
 
-        System.out.println("Enter true if it is little indian or false if not:");
-        isLittleEndian = consoleInput.nextBoolean();
+        System.out.println("Enter the input file name: ");
+        INPUT_FILE_PATH = consoleInput.next();
 
-        System.out.println("Enter 1 if it is unsigned int, 2 if it is signed int, 3 if it is floating point number:");
-        int dataTypesWithNums = consoleInput.nextInt();
-        if (dataTypesWithNums == 1) {
-            dataType = DataType.UNSIGNED;
-        } else if (dataTypesWithNums == 2) {
-            dataType = DataType.SIGNED;
-        } else {
-            dataType = DataType.FLOAT;
+
+
+        System.out.println("Byte ordering:"); //l for little endian, b for big endian.
+        char byteOrdering = consoleInput.next().charAt(0);
+        if(byteOrdering == 'l')
+            isLittleEndian = true;
+        else if (byteOrdering == 'b')
+            isLittleEndian = false;
+        else{
+            System.out.println("Invalid byte ordering! Enter l for Little Endian b for Big Endian.");
+            System.exit(0);
         }
 
-        System.out.println("Enter the data type byte size:");
+        System.out.println("Data type: ");
+        String dataTypeString = consoleInput.next();
+        if (dataTypeString.equals("unsigned")) {
+            dataType = DataType.UNSIGNED;
+        } else if (dataTypeString.equals("int")) {
+            dataType = DataType.SIGNED;
+        } else if (dataTypeString.equals("float")) {
+            dataType = DataType.FLOAT;
+        }
+        else {
+            System.out.println("Invalid data type! Enter float, int or unsigned.");
+            System.exit(0);
+        }
+
+        System.out.println("Data type size: ");
         sizeOfData = consoleInput.nextInt();
 
     }
@@ -195,8 +212,8 @@ public class Converter {
         }
 
 
-        int fractionInt = unsignedToDecimal(fraction); //Decimal value of fraction
-        int expInt = unsignedToDecimal(exp); //Decimal value of exp
+        int fractionInt = (int) (unsignedToDecimal(fraction)); //Decimal value of fraction
+        int expInt = (int) unsignedToDecimal(exp); //Decimal value of exp
         int bias = (int) (Math.pow(2, exp.length() - 1)) - 1; //Bias is 2^(k-1) - 1     k is exp.lenght()
 
         if (findTypeOfFloat(exp) == FloatingType.SPECIAL) { //Special floating point number, exp = 111....11
@@ -319,8 +336,8 @@ public class Converter {
 
     // This method takes a binary string as input and converts it to its equivalent decimal value.
     // The method returns the decimal value as an integer.
-    public static int unsignedToDecimal(String binaryString) {
-        int decimal = 0; // initialize decimal value to 0
+    public static long unsignedToDecimal(String binaryString) {
+        long decimal = 0; // initialize decimal value to 0
         int powerIndex = 0; // initialize power index to 0
 
         // loop through the binary string from right to left
