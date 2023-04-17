@@ -5,7 +5,8 @@
  */
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Scanner;
 
 public class Converter {
 
@@ -19,7 +20,7 @@ public class Converter {
         FLOAT
     }
 
-    enum FloatingTYpe { //There are three kinds of floating points: denormalized, normalized, special
+    enum FloatingType { //There are three kinds of floating points: denormalized, normalized, special
         NORMALIZED,
         DENORMALIZED,
         SPECIAL
@@ -31,30 +32,101 @@ public class Converter {
     static boolean isLittleEndian;
     static String currentLine;
 
-    public static void main(String args[]) {
+    private static FileReader inputFileReader;
+    private static FileWriter outputFileWriter;
+    private static BufferedReader bufferedReader;
 
-        takeInputs();  //It will ask for the data type, data size and byte ordering from the user and update the global variables
-
-        while (currentLine != null) {
-
-            currentLine = hexToBinary(currentLine);
-
-            if (sizeOfData == 1) { // We have 12 numbers in each line
-
-            } else if (sizeOfData == 2) { //We have 6 numbers in each line
+    private static final String OUTPUT_FILE_PATH = "output.txt";
+    private static final String INPUT_FILE_PATH = "input.txt";
 
 
-            } else if (sizeOfData == 3) { //We have 4 numbers in each line
+    public static void main(String args[]) throws IOException {
 
 
-            } else { //We have 3 numbers in each line
+        try {
+            takeInputs();  //It will ask for the data type, data size and byte ordering from the user and update the global variables
+            openFiles();
+
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+            System.exit(0);
+        }
+
+        bufferedReader = new BufferedReader(inputFileReader);
+
+        readLine();
+
+        while (currentLine != null && currentLine.length() == 35) {
+            readLinesExtractNumbersAndPrint();
+
+            //currentLine = hexToBinary(currentLine);
+            readLine();
+            System.out.println();
+            outputFileWriter.write('\n');
+        }
+
+        inputFileReader.close();
+        outputFileWriter.close();
+
+    }
+
+    private static void readLinesExtractNumbersAndPrint() {
+        ArrayList<String> numbers = new ArrayList<>();
+
+        int startingIndex = 0;
+        int endingIndex = 0;
+
+        if (sizeOfData == 1)
+            endingIndex = 1;
+        else if (sizeOfData == 2)
+            endingIndex = 4;
+        else if (sizeOfData == 3)
+            endingIndex = 7;
+        else
+            endingIndex = 10;
 
 
+        while (endingIndex <= 34) {
+
+            String currentNumber = currentLine.substring(startingIndex, endingIndex + 1);
+            currentNumber = byteOrdering(currentNumber); //If is little endian, do some process.
+            currentNumber = deleteSpaces(currentNumber);
+            currentNumber = hexToBinary(currentNumber);
+
+            if (dataType == DataType.FLOAT) {
+                numbers.add(decodeFloat(currentNumber));
+            } else if (dataType == DataType.SIGNED) {
+                numbers.add(signedToDecimal(currentNumber) + "");
+            } else {
+                numbers.add(unsignedToDecimal(currentNumber) + "");
             }
 
 
+            if (sizeOfData == 1) {
+                startingIndex += 3;
+                endingIndex += 3;
+            } else if (sizeOfData == 2) {
+                startingIndex += 6;
+                endingIndex += 6;
+            } else if (sizeOfData == 3) {
+                startingIndex += 9;
+                endingIndex += 9;
+            } else {
+                startingIndex += 12;
+                endingIndex += 12;
+            }
+
         }
 
+        for (int i = 0; i < numbers.size(); i++) {
+            printOutput(numbers.get(i), outputFileWriter);
+        }
+    }
+
+
+    private static void openFiles() throws IOException {
+        outputFileWriter = new FileWriter(OUTPUT_FILE_PATH);
+        inputFileReader = new FileReader(INPUT_FILE_PATH);
 
     }
 
@@ -62,7 +134,7 @@ public class Converter {
 
         Scanner consoleInput = new Scanner(System.in);
 
-        System.out.println("Enter 1 if it is little indian or 0 if not:");
+        System.out.println("Enter true if it is little indian or false if not:");
         isLittleEndian = consoleInput.nextBoolean();
 
         System.out.println("Enter 1 if it is unsigned int, 2 if it is signed int, 3 if it is floating point number:");
@@ -71,7 +143,7 @@ public class Converter {
             dataType = DataType.UNSIGNED;
         } else if (dataTypesWithNums == 2) {
             dataType = DataType.SIGNED;
-        } else if (dataTypesWithNums == 3) {
+        } else {
             dataType = DataType.FLOAT;
         }
 
@@ -126,7 +198,7 @@ public class Converter {
         int expInt = unsignedToDecimal(exp); //Decimal value of exp
         int bias = (int) (Math.pow(2, exp.length() - 1)) - 1; //Bias is 2^(k-1) - 1     k is exp.lenght()
 
-        if (findTypeOfFloat(exp) == FloatingTYpe.SPECIAL) { //Special floating point number, exp = 111....11
+        if (findTypeOfFloat(exp) == FloatingType.SPECIAL) { //Special floating point number, exp = 111....11
 
             if (fractionInt != 0) {  //If the fraction is not all zero
                 return "NaN";
@@ -137,7 +209,7 @@ public class Converter {
                     return "-∞";
             }
 
-        } else if (findTypeOfFloat(exp) == FloatingTYpe.NORMALIZED) { //Normalized floating point number
+        } else if (findTypeOfFloat(exp) == FloatingType.NORMALIZED) { //Normalized floating point number
 
             int E = expInt - bias;
             double mantissa = 1 + fractionInt / Math.pow(2, 13); //To find .001011010110, first find its unsgined value,
@@ -156,11 +228,57 @@ public class Converter {
 
     }
 
+    public static String roundFraction(String str) {
 
-    public static FloatingTYpe findTypeOfFloat(String exp) {
+        String one = "1";
+        int oneInt = Integer.parseInt(one, 2);
+        String first13 = str.substring(0, 13);
+        long first13Long = Long.parseLong(first13, 2);
+        String remainder = str.substring(13);
+        long remainderLong = Long.parseLong(remainder);
+        int length = remainder.length();
+        long sum = 0;
+
+        if (remainderLong < (10 ^ (length - 1))) {
+
+            return first13;
+        } else if (remainderLong > (10 ^ (length - 1))) {
+
+            sum = first13Long + oneInt;
+            return Long.toBinaryString(sum);
+        } else if (remainderLong == (10 ^ (length - 1))) {
+
+            if (str.charAt(12) == '1') {
+
+                sum = first13Long + oneInt;
+                return Long.toBinaryString(sum);
+            } else {
+
+                return first13;
+            }
+        } else return first13;
+    }
 
 
-        return FloatingTYpe.NORMALIZED;
+    public static FloatingType findTypeOfFloat(String exp) {
+
+        boolean isThereZero = false;
+        boolean isThereOne = false;
+
+        for (int i = 0; i < exp.length(); i++) {
+
+            if (exp.charAt(i) == '0')
+                isThereZero = true;
+            else if (exp.charAt(i) == '1')
+                isThereOne = true;
+        }
+
+        if (isThereOne == true && isThereZero == false)
+            return FloatingType.SPECIAL;
+        else if (isThereOne == false && isThereZero == true)
+            return FloatingType.DENORMALIZED;
+        else
+            return FloatingType.NORMALIZED;
     }
 
     // This method takes a hexadecimal string as input and converts it to its equivalent binary value.
@@ -226,6 +344,49 @@ public class Converter {
             decimal = -1 * (decimal + 1); // if the sign bit is negative, convert the decimal value to its two's complement form
         }
         return decimal; // return the final decimal value
+    }
+
+
+    public static void readLine() throws IOException {
+        //BufferedReader bufferReader = new BufferedReader(fileReader);
+        currentLine = bufferedReader.readLine();
+    }
+
+    public static String byteOrdering(String data) {
+
+        if (!isLittleEndian)
+            return data;
+
+        if (data.length() == 2) {
+            return data;
+        } else if (data.length() == 5) {
+            return data.substring(3, 5) + " " + data.substring(0, 2);
+        } else if (data.length() == 8) {
+            return data.substring(6, 8) + " " + data.substring(3, 5) + " " + data.substring(0, 2);
+        } else if (data.length() == 11) {
+            return data.substring(9, 11) + " " + data.substring(6, 8) + " " + data.substring(3, 5) + " " + data.substring(0, 2);
+        }
+        return null;
+    }
+
+
+    public static String deleteSpaces(String str) {  //This function deletes the whitespaces in a string.
+        String[] bytes = str.split("\\s+");
+
+        String newStr = "";
+
+        for (int i = 0; i < bytes.length; i++) {
+            newStr += bytes[i];
+        }
+
+        return newStr;
+    }
+
+
+    public static void printOutput(String number, FileWriter file) {
+
+        System.out.print(number + " ");
+
     }
 
 
