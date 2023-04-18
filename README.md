@@ -12,4 +12,4 @@ In the beginning of the program, the user prompts the input file name, byte orde
 
 For instance, if it is float and the data size is 4 bytes, the program takes 4 bytes of the line and interprets it as a float number. During this process, byte order is also considered.
 
-At the end, the numbers are printed both consolen and output.txt.
+At the end, the numbers are printed both console and output.txt.
